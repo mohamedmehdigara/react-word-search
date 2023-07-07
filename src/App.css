@@ -92,3 +92,12 @@ h1 {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.grid td.selected {
+  background-color: #f0f0f0;
+}
+
+.grid td.selected-word {
+  background-color: #c1e4ff;
+}
+

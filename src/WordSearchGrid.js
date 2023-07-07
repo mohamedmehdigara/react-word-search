@@ -1,102 +1,137 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const WordSearchGrid = ({ words, gridSize, onWordSelect, isGameOver }) => {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // Available letters
+  const [grid, setGrid] = useState([]);
+  const [selectedCells, setSelectedCells] = useState([]);
 
-  const [grid, setGrid] = useState(generateGrid());
+  useEffect(() => {
+    generateGrid();
+  }, [gridSize]);
 
-  function generateGrid() {
+  const generateGrid = () => {
     const newGrid = [];
+
     for (let row = 0; row < gridSize; row++) {
       const newRow = [];
+
       for (let col = 0; col < gridSize; col++) {
-        const randomLetter =
-          alphabet[Math.floor(Math.random() * alphabet.length)];
-        newRow.push({ letter: randomLetter, selected: false });
+        const randomChar = getRandomChar();
+        newRow.push(randomChar);
       }
+
       newGrid.push(newRow);
     }
-    return newGrid;
-  }
 
-  const handleCellMouseDown = (row, col) => {
-    if (isGameOver) return;
-
-    const updatedGrid = [...grid];
-    updatedGrid[row][col].selected = true;
-    setGrid(updatedGrid);
+    setGrid(newGrid);
   };
 
-  const handleCellMouseUp = () => {
-    if (isGameOver) return;
+  const getRandomChar = () => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    return characters[randomIndex];
+  };
 
-    const selectedCells = [];
-
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
-        if (grid[row][col].selected) {
-          selectedCells.push({ row, col });
-        }
-      }
+  const handleCellClick = (row, col) => {
+    if (!isGameOver) {
+      const clickedCell = { row, col };
+      setSelectedCells([...selectedCells, clickedCell]);
     }
+  };
 
-    const selectedWord = checkForWord(selectedCells);
+  const handleTouchStart = (row, col) => {
+    if (!isGameOver) {
+      const touchedCell = { row, col };
+      setSelectedCells([...selectedCells, touchedCell]);
+    }
+  };
+
+  const handleTouchMove = (event) => {
+    event.preventDefault();
+    if (!isGameOver) {
+      const touch = event.touches[0];
+      const cellWidth = event.target.offsetWidth;
+      const cellHeight = event.target.offsetHeight;
+      const row = Math.floor(touch.clientY / cellHeight);
+      const col = Math.floor(touch.clientX / cellWidth);
+      const touchedCell = { row, col };
+      setSelectedCells([...selectedCells, touchedCell]);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isGameOver) {
+      onWordSelected();
+    }
+  };
+
+  const onWordSelected = () => {
+    const selectedWord = getSelectedWord();
+
     if (selectedWord) {
       onWordSelect(selectedWord);
     }
 
-    const updatedGrid = [...grid];
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
-        updatedGrid[row][col].selected = false;
-      }
+    setSelectedCells([]);
+  };
+
+  const getSelectedWord = () => {
+    let selectedWord = '';
+
+    // Convert selected cells to a string of characters
+    const selectedChars = selectedCells.map(
+      ({ row, col }) => grid[row][col]
+    );
+
+    // Convert the selected characters to both forward and backward directions
+    const forwardWord = selectedChars.join('');
+    const backwardWord = selectedChars.reverse().join('');
+
+    // Find the matching word in the word list
+    const foundWord =
+      words.find((word) => word === forwardWord) ||
+      words.find((word) => word === backwardWord);
+
+    if (foundWord) {
+      selectedWord = foundWord;
     }
-    setGrid(updatedGrid);
-  };
-
-  const handleCellMouseEnter = (row, col) => {
-    if (isGameOver) return;
-
-    if (grid[row][col].selected) return;
-
-    const updatedGrid = [...grid];
-    updatedGrid[row][col].selected = true;
-    setGrid(updatedGrid);
-  };
-
-  const checkForWord = (selectedCells) => {
-    const selectedWord = words.find((word) => {
-      if (word.length !== selectedCells.length) {
-        return false;
-      }
-
-      return selectedCells.every((cell, index) => {
-        const { row, col } = cell;
-        return grid[row][col].letter === word[index];
-      });
-    });
 
     return selectedWord;
   };
 
   return (
-    <div className="word-search-grid">
-      {grid.map((row, rowIndex) => (
-        <div key={rowIndex} className="row">
-          {row.map((cell, colIndex) => (
-            <div
-              key={colIndex}
-              className={`cell ${cell.selected ? 'selected' : ''}`}
-              onMouseDown={() => handleCellMouseDown(rowIndex, colIndex)}
-              onMouseUp={handleCellMouseUp}
-              onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
-            >
-              {cell.selected && <span className="selected-letter">{cell.letter}</span>}
-              {!cell.selected && cell.letter}
-            </div>
+    <div className="grid-container">
+      <table className="grid">
+        <tbody>
+          {grid.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((char, colIndex) => {
+                const cellCoordinates = { row: rowIndex, col: colIndex };
+                const isCellSelected = selectedCells.some(
+                  (cell) =>
+                    cell.row === rowIndex && cell.col === colIndex
+                );
+                const isSelectedWord =
+                  selectedCells.length > 1 && getSelectedWord() !== '';
+
+                return (
+                  <td
+                    key={colIndex}
+                    className={`${
+                      isCellSelected ? 'selected' : ''
+                    } ${isSelectedWord ? 'selected-word' : ''}`}
+                    onClick={() => handleCellClick(rowIndex, colIndex)}
+                    onTouchStart={() => handleTouchStart(rowIndex, colIndex)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    {char}
+                  </td>
+                );
+              })}
+            </tr>
           ))}
-        </div>
-      ))}
+        </tbody>
+      </table>
     </div>
   );
 };
