@@ -93,11 +93,12 @@ h1 {
   cursor: not-allowed;
 }
 
-.grid td.selected {
-  background-color: #f0f0f0;
-}
+
 
 .grid td.selected-word {
   background-color: #c1e4ff;
 }
 
+.grid td.selected {
+  background-color: #f0f0f0;
+}
