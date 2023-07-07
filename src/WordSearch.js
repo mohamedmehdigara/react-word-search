@@ -10,10 +10,16 @@ const WordSearch = () => {
   const [score, setScore] = useState(0);
   const [remainingTime, setRemainingTime] = useState(gameDurationInSeconds);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [foundWords, setFoundWords] = useState([]);
+  const [hintLetter, setHintLetter] = useState('');
 
   const handleWordSelect = (word) => {
     setSelectedWord(word);
     setScore((prevScore) => prevScore + 1);
+
+    if (!foundWords.includes(word)) {
+      setFoundWords([...foundWords, word]);
+    }
   };
 
   useEffect(() => {
@@ -39,6 +45,19 @@ const WordSearch = () => {
     setScore(0);
     setRemainingTime(gameDurationInSeconds);
     setIsGameOver(false);
+    setFoundWords([]);
+  };
+
+  const handleHint = () => {
+    const unfoundWords = words.filter((word) => !foundWords.includes(word));
+
+    if (unfoundWords.length > 0) {
+      const randomWord = unfoundWords[Math.floor(Math.random() * unfoundWords.length)];
+      const randomLetterIndex = Math.floor(Math.random() * randomWord.length);
+      const letter = randomWord[randomLetterIndex];
+
+      setHintLetter(letter);
+    }
   };
 
   return (
@@ -57,6 +76,33 @@ const WordSearch = () => {
             onWordSelect={handleWordSelect}
             isGameOver={isGameOver}
           />
+          <div className="word-list">
+            <h2>Word List</h2>
+            <ul>
+              {words.map((word, index) => (
+                <li
+                  key={index}
+                  className={foundWords.includes(word) ? 'found' : ''}
+                >
+                  {word}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="hint-section">
+            <button
+              className="btn btn-primary"
+              onClick={handleHint}
+              disabled={foundWords.length === words.length}
+            >
+              Get Hint
+            </button>
+            {hintLetter && (
+              <p className="hint-text">
+                Hint: The letter "{hintLetter}" is in one of the unfound words.
+              </p>
+            )}
+          </div>
         </div>
       ) : (
         <div className="text-center">
