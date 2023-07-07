@@ -1,17 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import WordSearchGrid from './WordSearchGrid';
+import ProgressBar from 'react-bootstrap/ProgressBar';
+
+const words = ['REACT', 'WORD', 'SEARCH', 'GAME']; // Define your word list here
+const defaultGridSize = 10; // Default number of rows and columns in the grid
+const gameDurationInSeconds = 180; // Duration of the game in seconds
 
 const WordSearch = () => {
-  const words = ['REACT', 'WORD', 'SEARCH', 'GAME']; // Define your word list here
-  const gridSize = 10; // Number of rows and columns in the grid
-  const gameDurationInSeconds = 180; // Duration of the game in seconds
-
   const [selectedWord, setSelectedWord] = useState('');
   const [score, setScore] = useState(0);
   const [remainingTime, setRemainingTime] = useState(gameDurationInSeconds);
   const [isGameOver, setIsGameOver] = useState(false);
   const [foundWords, setFoundWords] = useState([]);
-  const [hintLetter, setHintLetter] = useState('');
+  const [gridSize, setGridSize] = useState(defaultGridSize);
+
+  const successSoundContext = new AudioContext();
+  const gameOverSoundContext = new AudioContext();
+
+  const playSuccessSound = () => {
+    const successSound = successSoundContext.createOscillator();
+    successSound.frequency.setValueAtTime(440, successSoundContext.currentTime);
+    successSound.connect(successSoundContext.destination);
+    successSound.start();
+    successSound.stop(successSoundContext.currentTime + 0.3);
+  };
+
+  const playGameOverSound = () => {
+    const gameOverSound = gameOverSoundContext.createOscillator();
+    gameOverSound.frequency.setValueAtTime(220, gameOverSoundContext.currentTime);
+    gameOverSound.connect(gameOverSoundContext.destination);
+    gameOverSound.start();
+    gameOverSound.stop(gameOverSoundContext.currentTime + 0.5);
+  };
 
   const handleWordSelect = (word) => {
     setSelectedWord(word);
@@ -20,25 +40,16 @@ const WordSearch = () => {
     if (!foundWords.includes(word)) {
       setFoundWords([...foundWords, word]);
     }
+
+    playSuccessSound();
   };
 
   useEffect(() => {
-    if (remainingTime <= 0) {
+    if (remainingTime <= 0 || foundWords.length === words.length) {
       setIsGameOver(true);
+      playGameOverSound();
     }
-  }, [remainingTime]);
-
-  useEffect(() => {
-    if (!isGameOver) {
-      const timer = setInterval(() => {
-        setRemainingTime((prevTime) => prevTime - 1);
-      }, 1000);
-
-      return () => {
-        clearInterval(timer);
-      };
-    }
-  }, [isGameOver]);
+  }, [remainingTime, foundWords]);
 
   const handleRestartGame = () => {
     setSelectedWord('');
@@ -48,27 +59,34 @@ const WordSearch = () => {
     setFoundWords([]);
   };
 
-  const handleHint = () => {
-    const unfoundWords = words.filter((word) => !foundWords.includes(word));
-
-    if (unfoundWords.length > 0) {
-      const randomWord = unfoundWords[Math.floor(Math.random() * unfoundWords.length)];
-      const randomLetterIndex = Math.floor(Math.random() * randomWord.length);
-      const letter = randomWord[randomLetterIndex];
-
-      setHintLetter(letter);
-    }
+  const handleGridSizeChange = (event) => {
+    const newSize = parseInt(event.target.value, 10);
+    setGridSize(newSize || defaultGridSize);
   };
 
   return (
     <div className="container">
       <h1 className="text-center">Word Search Game</h1>
+      <div className="grid-size">
+        <label htmlFor="gridSize">Grid Size:</label>
+        <input
+          type="number"
+          id="gridSize"
+          value={gridSize}
+          onChange={handleGridSizeChange}
+          min="1"
+          max="20"
+        />
+      </div>
       {!isGameOver ? (
         <div>
           <div className="d-flex justify-content-between mb-3">
             <p>Selected Word: {selectedWord}</p>
             <p>Score: {score}</p>
-            <p>Time Remaining: {remainingTime}s</p>
+            <ProgressBar
+              now={(remainingTime / gameDurationInSeconds) * 100}
+              label={`${remainingTime}s`}
+            />
           </div>
           <WordSearchGrid
             words={words}
@@ -89,24 +107,19 @@ const WordSearch = () => {
               ))}
             </ul>
           </div>
-          <div className="hint-section">
-            <button
-              className="btn btn-primary"
-              onClick={handleHint}
-              disabled={foundWords.length === words.length}
-            >
-              Get Hint
-            </button>
-            {hintLetter && (
-              <p className="hint-text">
-                Hint: The letter "{hintLetter}" is in one of the unfound words.
-              </p>
-            )}
-          </div>
         </div>
       ) : (
         <div className="text-center">
-          <p>Game Over! Final Score: {score}</p>
+          {foundWords.length === words.length ? (
+            <div>
+              <p>Congratulations! You found all the words.</p>
+              <p>Final Score: {score}</p>
+            </div>
+          ) : (
+            <div>
+              <p>Game Over! Final Score: {score}</p>
+            </div>
+          )}
           <button className="btn btn-primary" onClick={handleRestartGame}>
             Restart Game
           </button>
